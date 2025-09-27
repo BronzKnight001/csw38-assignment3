@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Canvas Animation — Luis Angel Mojica Ochoa</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg-black:#000000;
+      --panel-dark:#141414;
+      --panel-dim:#1f1f1f;
+      --accent-red:#c8102e;
+      --white:#ffffff;
+      --muted:#9a9a9a;
+    }
+    html,body{ height:100%; margin:0; font-family:Arial, Helvetica, sans-serif; background:var(--bg-black); color:var(--white); }
+    header{
+      background:linear-gradient(180deg,var(--panel-dim),#0b0b0b);
+      border-bottom:4px solid var(--accent-red);
+      padding:18px 24px;
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+    header h1{ margin:0; font-size:20px; font-weight:700; color:var(--white); }
+    .container{
+      max-width:1100px;
+      margin:20px auto;
+      padding:20px;
+      display:grid;
+      grid-template-columns:1fr 480px;
+      gap:20px;
+      align-items:start;
+    }
+    .content{
+      background:var(--panel-dark);
+      border-radius:8px;
+      padding:20px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.6);
+      min-height:380px;
+    }
+    .canvas-column{
+      background:linear-gradient(180deg,#171717,#101010);
+      border-radius:8px;
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      align-items:center;
+      box-shadow:0 6px 18px rgba(0,0,0,0.6);
+    }
+    .canvas-wrap{
+      width:420px;
+      height:300px;
+      border:3px solid var(--accent-red);
+      border-radius:8px;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(180deg,#0a0a0a,#0b0b0b);
+    }
+    canvas{ display:block; width:100%; height:100%; }
+    h2{ margin-top:0; color:var(--white); }
+    p{ color:var(--muted); line-height:1.5; }
+    @media(max-width:900px){
+      .container{ grid-template-columns:1fr; padding:12px; }
+      .canvas-column{ order:-1; width:100%; }
+      .canvas-wrap{ width:100%; height:320px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Luis Angel Mojica Ochoa</h1>
+  </header>
+
+  <div class="container">
+    <main class="content">
+      <h2>Assignment Overview</h2>
+      <p>This page demonstrates two canvas animations: a bouncing-balls canvas (primary) and a spiral-builder canvas (secondary). The secondary canvas builds a spiral by adding circles one at a time, grows circle size when circles become close together to reduce visual overlap, stops once it reaches 100 circles, then resets and repeats.</p>
+
+      <h2>History of HTML Web Animation</h2>
+      <p>Web animation began with simple animated GIFs on early webpages, progressed through plugin ecosystems such as Adobe Flash and Java applets, and later shifted to standardized, native technologies like CSS animations, SVG, and the HTML5 canvas paired with JavaScript. Modern web animation emphasizes performance, accessibility, and browser-native APIs rather than external plugins.</p>
+    </main>
+
+    <aside class="canvas-column">
+      <div class="canvas-wrap" title="Bouncing balls canvas">
+        <canvas id="canvasA" width="420" height="300" aria-label="Bouncing balls canvas"></canvas>
+      </div>
+
+      <div class="canvas-wrap" title="Spiral builder canvas">
+        <canvas id="canvasB" width="420" height="300" aria-label="Spiral builder canvas"></canvas>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    /* ---------- Utility: scale canvas for DPR ---------- */
+    function makeCrisp(canvas) {
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const cssW = canvas.width;
+      const cssH = canvas.height;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      ctx.scale(dpr, dpr);
+      return ctx;
+    }
+
+    /* ---------- Canvas A: Bouncing balls (two objects) ---------- */
+    const canvasA = document.getElementById('canvasA');
+    const ctxA = makeCrisp(canvasA);
+
+    const ball1 = { x: 80, y: 60, r: 30, dx: 3.4, dy: 2.6, color: '#c8102e' };
+    const ball2 = { x: 340, y: 240, r: 14, dx: -2.6, dy: -1.8, color: '#ffffff' };
+
+    function clearA(){
+      ctxA.clearRect(0,0,canvasA.width,canvasA.height);
+    }
+
+    function drawBallA(b){
+      ctxA.beginPath();
+      if (b.color === '#c8102e') {
+        ctxA.shadowColor = 'rgba(200,16,46,0.45)';
+        ctxA.shadowBlur = 18;
+      } else {
+        ctxA.shadowBlur = 0;
+      }
+      ctxA.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctxA.fillStyle = b.color;
+      ctxA.fill();
+      ctxA.lineWidth = 2;
+      ctxA.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctxA.stroke();
+      ctxA.closePath();
+      ctxA.shadowBlur = 0;
+    }
+
+    function updateBallA(b){
+      b.x += b.dx;
+      b.y += b.dy;
+      const maxW = canvasA.width / (window.devicePixelRatio || 1);
+      const maxH = canvasA.height / (window.devicePixelRatio || 1);
+      if (b.x + b.r > maxW) { b.x = maxW - b.r; b.dx *= -1; }
+      if (b.x - b.r < 0) { b.x = b.r; b.dx *= -1; }
+      if (b.y + b.r > maxH) { b.y = maxH - b.r; b.dy *= -1; }
+      if (b.y - b.r < 0) { b.y = b.r; b.dy *= -1; }
+    }
+
+    /* ---------- Canvas B: Spiral builder (adds circles until 100 then reset) ---------- */
+    const canvasB = document.getElementById('canvasB');
+    const ctxB = makeCrisp(canvasB);
+
+    const dpr = window.devicePixelRatio || 1;
+    const spiral = {
+      cx: canvasB.width / (2 * dpr),
+      cy: canvasB.height / (2 * dpr),
+      angle: 0,
+      step: 0.45,
+      spiralA: 2.2,
+      countMax: 100,
+      circles: [],
+      holdFrames: 45
+    };
+
+    function computeSizeBasedOnSpacing(x, y) {
+      const prev = spiral.circles[spiral.circles.length - 1];
+      if (!prev) return 6;
+      const dx = x - prev.x;
+      const dy = y - prev.y;
+      const spacing = Math.hypot(dx, dy);
+      const size = Math.min(22, Math.max(4, 14 - spacing * 0.45));
+      return size;
+    }
+
+    function addSpiralCircle() {
+      const a = spiral.spiralA;
+      const theta = spiral.angle;
+      const r = a * theta;
+      const x = spiral.cx + r * Math.cos(theta);
+      const y = spiral.cy + r * Math.sin(theta);
+      const size = computeSizeBasedOnSpacing(x, y);
+      const color = (spiral.circles.length % 2 === 0) ? '#c8102e' : '#ffffff';
+      spiral.circles.push({ x, y, r: size, color, alpha: 1 });
+      spiral.angle += spiral.step;
+    }
+
+    function drawSpiral() {
+      for (let i = 0; i < spiral.circles.length; i++) {
+        const c = spiral.circles[i];
+        ctxB.beginPath();
+        ctxB.globalAlpha = c.alpha;
+        ctxB.fillStyle = c.color;
+        ctxB.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctxB.fill();
+        ctxB.closePath();
+        ctxB.globalAlpha = 1;
+      }
+    }
+
+    function clearB() {
+      ctxB.clearRect(0, 0, canvasB.width, canvasB.height);
+    }
+
+    let holdCounter = 0;
+
+    function animateB() {
+      clearB();
+      if (spiral.circles.length < spiral.countMax) {
+        addSpiralCircle();
+      } else {
+        holdCounter++;
+        if (holdCounter > spiral.holdFrames) {
+          spiral.circles = [];
+          spiral.angle = 0;
+          holdCounter = 0;
+        }
+      }
+      drawSpiral();
+    }
+
+    /* ---------- Main animation loop ---------- */
+    function animateAll() {
+      clearA();
+      drawBallA(ball1);
+      drawBallA(ball2);
+      updateBallA(ball1);
+      updateBallA(ball2);
+      animateB();
+      requestAnimationFrame(animateAll);
+    }
+
+    animateAll();
+
+    /* ---------- Responsive recalculation on resize ---------- */
+    window.addEventListener('resize', () => {
+      const newDpr = window.devicePixelRatio || 1;
+      spiral.cx = canvasB.width / (2 * newDpr);
+      spiral.cy = canvasB.height / (2 * newDpr);
+    });
+  </script>
+</body>
+</html>
